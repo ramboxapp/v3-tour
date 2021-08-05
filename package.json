@@ -1,21 +1,21 @@
 {
-  "name": "vue-tour",
-  "version": "3.0.1",
-  "description": "Vue Tour is a lightweight, simple and customizable tour plugin for use with Vue.js. It provides a quick and easy way to guide your users through your application.",
-  "author": "Pulsar <pulsar.dev.team@gmail.com>",
+  "name": "v3-tour",
+  "version": "3.0.15",
+  "description": "v3-tour is a lightweight, simple and customizable tour plugin for use with Vue.js. It provides a quick and easy way to guide your users through your application.",
+  "author": "Sitronik <sitronik92@mail.ru>",
   "license": "MIT",
   "main": "dist/vue-tour.es.js",
   "module": "dist/vue-tour.umd.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pulsardev/vue-tour.git"
+    "url": "git+https://github.com/sitronik/v3-tour.git"
   },
   "typings": "types/index.d.ts",
   "keywords": [
     "vue",
     "tour"
   ],
-  "homepage": "https://pulsardev.github.io/vue-tour",
+  "homepage": "https://github.com/sitronik/v3-tour.git",
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vite build",
@@ -23,7 +23,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "@popperjs/core": "^2.9.1",
+    "popperjs-core-ionic-scroll-fix": "^2.4.1",
     "hash-sum": "^2.0.0",
     "jump.js": "^1.0.2"
   },
