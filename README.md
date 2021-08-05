@@ -1,8 +1,6 @@
-# Vue Tour
+# v3-tour
 
-[![CircleCI](https://circleci.com/gh/pulsardev/vue-tour/tree/master.svg?style=svg)](https://circleci.com/gh/pulsardev/vue-tour/tree/master)
-
-> Vue Tour is a lightweight, simple and customizable tour plugin for use with Vue.js.
+> v3-tour is a lightweight, simple and customizable tour plugin for use with Vue.js.
 > It provides a quick and easy way to guide your users through your application.
 
 [![Vue Tour](./screenshot.gif "Vue Tour")](https://pulsardev.github.io/vue-tour/)
@@ -14,7 +12,7 @@
 
 ## Getting Started
 
-You can install `vue-tour` using npm or by downloading the minified build on GitHub.
+You can install `v3-tour` using npm or by downloading the minified build on GitHub.
 
 ```
 npm install v3-tour
