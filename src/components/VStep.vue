@@ -203,9 +203,22 @@ export default {
 
       return offset
     },
+    getIonContent () {
+      const pages = document.getElementsByClassName('ion-page')
+      if (pages.length) {
+        const elByZIndexes = {}
+        for (const el of pages) {
+          const styles = window.getComputedStyle(el)
+          elByZIndexes[styles['z-index']] = el.querySelector('ion-content')
+        }
+
+        const maxZIndex = Math.max(...Object.keys(elByZIndexes).map(value => +value))
+        return { el: elByZIndexes[maxZIndex], pages: Object.keys(elByZIndexes).length }
+      }
+    },
     ionicScroll (jumpOptions) {
       const offset = this.getOffset(jumpOptions)
-      document.querySelector('ion-content').scrollByPoint(0, offset, this.step.duration || 1000)
+      this.getIonContent().el.scrollByPoint(0, offset, this.step.duration || 1000)
     }
   },
   mounted () {
