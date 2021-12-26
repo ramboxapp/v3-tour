@@ -56,7 +56,8 @@ export const DEFAULT_STEP_OPTIONS = {
     {
       name: 'preventOverflow',
       options: {
-        rootBoundary: 'window'
+        rootBoundary: 'window',
+        padding: 10
       }
     },
     {
