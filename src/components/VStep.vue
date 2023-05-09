@@ -87,7 +87,7 @@ export default {
   data () {
     return {
       hash: sum(this.step.target),
-      targetElement: document.querySelector(this.step.target)
+      targetElement: this.step.parent ? document.querySelector(this.step.target)?.parentElement : document.querySelector(this.step.target)
     }
   },
   computed: {
@@ -108,13 +108,10 @@ export default {
   },
   methods: {
     createStep () {
-      if (this.debug) {
-        console.log('[Vue Tour] The target element ' + this.step.target + ' of .v-step[id="' + this.hash + '"] is:', this.targetElement)
-      }
+      if (this.debug) console.log('[Vue Tour] The target element ' + this.step.target + ' of .v-step[id="' + this.hash + '"] is:', this.targetElement);
 
-      if (this.isSticky) {
-        document.body.appendChild(this.$refs['v-step-' + this.hash])
-      } else {
+      if (this.isSticky) document.body.appendChild(this.$refs['v-step-' + this.hash])
+      else {
         if (this.targetElement) {
           this.enableScrolling()
           this.createHighlight()
@@ -125,13 +122,9 @@ export default {
             this.params
           )
         } else {
-          if (this.debug) {
-            console.error('[Vue Tour] The target element ' + this.step.target + ' of .v-step[id="' + this.hash + '"] does not exist!')
-          }
+          if (this.debug) console.error('[Vue Tour] The target element ' + this.step.target + ' of .v-step[id="' + this.hash + '"] does not exist!')
           this.$emit('targetNotFound', this.step)
-          if (this.stopOnFail) {
-            this.stop()
-          }
+          this.stopOnFail ? this.stop() : this.nextStep()
         }
       }
     },
@@ -159,7 +152,7 @@ export default {
       return this.params.highlight
     },
     createHighlight () {
-      if (this.isHighlightEnabled()) {
+      if (this.isHighlightEnabled() && this.targetElement) {
         document.body.classList.add(HIGHLIGHT.classes.active)
         const transitionValue = window.getComputedStyle(this.targetElement).getPropertyValue('transition')
 
@@ -178,7 +171,7 @@ export default {
       }
     },
     removeHighlight () {
-      if (this.isHighlightEnabled()) {
+      if (this.isHighlightEnabled() && this.targetElement) {
         const target = this.targetElement
         const currentTransition = this.targetElement.style.transition
         this.targetElement.classList.remove(HIGHLIGHT.classes.targetHighlighted)
