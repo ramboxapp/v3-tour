@@ -203,13 +203,13 @@ export default {
 
     handleKeyup (e) {
       if (this.customOptions.debug) console.log('[Vue Tour] A keyup event occured:', e)
-      const isButtonAllowed = (name) => this.customOptions.enabledButtons.hasOwnProperty(name) ? this.customOptions.enabledButtons[name] : true
+      const isButtonAllowed = (name) => this.steps[this.currentStep]?.enabledButtons?.hasOwnProperty(name) ? this.steps[this.currentStep].enabledButtons[name] : true
       switch (e.keyCode) {
         case KEYS.ARROW_RIGHT:
-          isButtonAllowed('buttonPrevious') && this.isKeyEnabled('arrowRight') && this.nextStep()
+          isButtonAllowed('buttonPrevious') && this.isKeyEnabled('arrowRight') && this.previousStep()
           break
         case KEYS.ARROW_LEFT:
-          isButtonAllowed('buttonNext') && this.isKeyEnabled('arrowLeft') && this.previousStep()
+          isButtonAllowed('buttonNext') && this.isKeyEnabled('arrowLeft') && this.nextStep()
           break
         case KEYS.ESCAPE:
           this.isKeyEnabled('escape') && this.stop()

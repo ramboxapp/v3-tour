@@ -71,7 +71,7 @@ export const DEFAULT_STEP_OPTIONS = {
 }
 
 export const KEYS = {
-  ARROW_RIGHT: 39,
-  ARROW_LEFT: 37,
+  ARROW_RIGHT: 37,
+  ARROW_LEFT: 39,
   ESCAPE: 27
 }
