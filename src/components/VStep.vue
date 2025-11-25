@@ -25,6 +25,7 @@
 			<div class="v-step__buttons">
 				<button
 					@click.prevent="skip"
+					:disabled="isProcessing"
 					v-if="!isLast && isButtonEnabled('buttonSkip')"
 					class="v-step__button v-step__button-skip"
 				>
@@ -32,6 +33,7 @@
 				</button>
 				<button
 					@click.prevent="previousStep"
+					:disabled="isProcessing"
 					v-if="!isFirst && isButtonEnabled('buttonPrevious')"
 					class="v-step__button v-step__button-previous"
 				>
@@ -39,6 +41,7 @@
 				</button>
 				<button
 					@click.prevent="nextStep"
+					:disabled="isProcessing"
 					v-if="!isLast && isButtonEnabled('buttonNext')"
 					class="v-step__button v-step__button-next"
 				>
@@ -46,6 +49,7 @@
 				</button>
 				<button
 					@click.prevent="finish"
+					:disabled="isProcessing"
 					v-if="isLast && isButtonEnabled('buttonStop')"
 					class="v-step__button v-step__button-stop"
 				>
@@ -127,10 +131,14 @@ export default {
 			type: String,
 			default: "inside",
 			validator: value => ["before", "inside", "after"].includes(value)
+		},
+		isProcessing: {
+			type: Boolean,
+			default: false
 		}
 	},
 	created() {
-		// Component lifecycle initialization
+		// Component lifecycle initialization.
 	},
 	data() {
 		return {
@@ -142,9 +150,9 @@ export default {
 		params() {
 			return {
 				...DEFAULT_STEP_OPTIONS,
-				...{ highlight: this.highlight }, // Use global tour highlight setting first
+				...{ highlight: this.highlight }, // Use global tour highlight setting first.
 				...{ enabledButtons: Object.assign({}, this.enabledButtons) },
-				...this.step.params // Then use local step parameters if defined
+				...this.step.params // Then use local step parameters if defined.
 			};
 		},
 		/**
@@ -391,6 +399,80 @@ export default {
 			return this.params.enabledButtons.hasOwnProperty(name)
 				? this.params.enabledButtons[name]
 				: true;
+		},
+		handleNext() {
+			const customAction = this.step.buttonNext?.action;
+			if (customAction) {
+				// Get the tour instance to access executeNavigationAction
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(customAction);
+				} else {
+					customAction();
+				}
+			} else {
+				// Get the tour instance to wrap the nextStep call
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(this.nextStep);
+				} else {
+					this.nextStep();
+				}
+			}
+		},
+		handlePrevious() {
+			const customAction = this.step.buttonPrevious?.action;
+			if (customAction) {
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(customAction);
+				} else {
+					customAction();
+				}
+			} else {
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(this.previousStep);
+				} else {
+					this.previousStep();
+				}
+			}
+		},
+		handleSkip() {
+			const customAction = this.step.buttonSkip?.action;
+			if (customAction) {
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(customAction);
+				} else {
+					customAction();
+				}
+			} else {
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(this.skip);
+				} else {
+					this.skip();
+				}
+			}
+		},
+		handleFinish() {
+			const customAction = this.step.buttonStop?.action;
+			if (customAction) {
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(customAction);
+				} else {
+					customAction();
+				}
+			} else {
+				const tour = this.$parent;
+				if (tour && tour.executeNavigationAction) {
+					tour.executeNavigationAction(this.finish);
+				} else {
+					this.finish();
+				}
+			}
 		},
 		getOffset(jumpOptions) {
 			const elemRect = this.targetElement.getBoundingClientRect();

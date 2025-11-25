@@ -16,6 +16,11 @@
 			:debug="customOptions.debug"
 			:container="'#app'"
 			:insert-position="customOptions.insertPosition"
+			:is-processing="isProcessing"
+			:handle-next="handleNext"
+			:handle-previous="handlePrevious"
+			:handle-skip="handleSkip"
+			:handle-finish="handleFinish"
 		>
 			<!--Default slot {{ currentStep }}-->
 			<v-step
@@ -37,11 +42,16 @@
 				:ionic="customOptions.ionic"
 				:container="'#app'"
 				:insert-position="customOptions.insertPosition"
+				:is-processing="isProcessing"
 				@targetNotFound="$emit('targetNotFound', $event)"
+				:handleNext="handleNext"
+				:handlePrevious="handlePrevious"
+				:handleSkip="handleSkip"
+				:handleFinish="handleFinish"
 			>
 				<!--<div v-if="index === 2" slot="actions">
-          <a @click="nextStep">Next step</a>
-        </div>-->
+					<a @click="nextStep">Next step</a>
+				</div>-->
 			</v-step>
 		</slot>
 	</div>
@@ -82,14 +92,15 @@ export default {
 	},
 	data() {
 		return {
-			currentStep: -1
+			currentStep: -1,
+			isProcessing: false
 		};
 	},
 	mounted() {
 		this.$tours[this.name] = this;
 	},
 	beforeUnmount() {
-		// Remove the keyup listener if it has been defined
+		// Remove the keyup listener if it has been defined.
 		if (this.customOptions.useKeyboardNavigation) {
 			window.removeEventListener("keyup", this.handleKeyup);
 		}
@@ -109,7 +120,7 @@ export default {
 				...this.callbacks
 			};
 		},
-		// Return true if the tour is active, which means that there's a VStep displayed
+		// Return true if the tour is active, which means that there's a VStep displayed.
 		isRunning() {
 			return (
 				this.currentStep > -1 && this.currentStep < this.numberOfSteps
@@ -129,84 +140,196 @@ export default {
 		}
 	},
 	methods: {
-		async start(startStep) {
-			// Register keyup listeners for this tour
-			if (this.customOptions.useKeyboardNavigation) {
-				window.addEventListener("keyup", this.handleKeyup);
+		async executeNavigationAction(action) {
+			// Allow disabling this feature via options.
+			if (!this.customOptions.preventMultipleActions) {
+				return action();
 			}
 
-			// Wait for the DOM to be loaded, then start the tour
-			startStep =
-				typeof startStep !== "undefined" ? parseInt(startStep, 10) : 0;
-			let step = this.steps[startStep];
-
-			let process = () =>
-				new Promise((resolve, reject) => {
-					setTimeout(() => {
-						this.customCallbacks.onStart();
-						this.currentStep = startStep;
-						resolve();
-					}, this.customOptions.startTimeout);
-				});
-
-			if (typeof step.before !== "undefined") {
-				try {
-					await step.before("start");
-				} catch (e) {
-					return Promise.reject(e);
+			// If already processing, ignore the action.
+			if (this.isProcessing) {
+				if (this.customOptions.debug) {
+					console.log(
+						"[Vue Tour] Navigation blocked - action already in progress"
+					);
 				}
+				return Promise.resolve();
 			}
-			await process();
 
-			return Promise.resolve();
+			this.isProcessing = true;
+			try {
+				await action();
+			} catch (error) {
+				if (this.customOptions.debug) {
+					console.error("[Vue Tour] Navigation error:", error);
+				}
+				this.isProcessing = false;
+				throw error;
+			}
+		},
+		async start(startStep) {
+			return this.executeNavigationAction(async () => {
+				// Register keyup listeners for this tour.
+				if (this.customOptions.useKeyboardNavigation) {
+					window.addEventListener("keyup", this.handleKeyup);
+				}
+
+				// Wait for the DOM to be loaded, then start the tour.
+				startStep =
+					typeof startStep !== "undefined"
+						? parseInt(startStep, 10)
+						: 0;
+				let step = this.steps[startStep];
+
+				if (typeof step.before !== "undefined") {
+					try {
+						await step.before("start");
+					} catch (e) {
+						return Promise.reject(e);
+					}
+				}
+
+				// Reset isProcessing before changing currentStep so the new step renders with buttons enabled.
+				this.isProcessing = false;
+
+				let process = () =>
+					new Promise((resolve, reject) => {
+						setTimeout(() => {
+							this.customCallbacks.onStart();
+							this.currentStep = startStep;
+							resolve();
+						}, this.customOptions.startTimeout);
+					});
+
+				await process();
+
+				return Promise.resolve();
+			});
 		},
 		async previousStep() {
-			let futureStep = this.currentStep - 1;
+			// If isProcessing is already active, we're being called from a wrapped custom action.
+			const wasProcessing = this.isProcessing;
 
-			let process = () =>
-				new Promise((resolve, reject) => {
-					this.customCallbacks.onPreviousStep(this.currentStep);
-					this.currentStep = futureStep;
-					resolve();
-				});
-
-			if (futureStep > -1) {
-				let step = this.steps[futureStep];
-				if (typeof step.before !== "undefined") {
-					try {
-						await step.before("previous");
-					} catch (e) {
-						return Promise.reject(e);
+			// Only activate isProcessing if it wasn't already active.
+			if (!wasProcessing && this.customOptions.preventMultipleActions) {
+				if (this.isProcessing) {
+					if (this.customOptions.debug) {
+						console.log(
+							"[Vue Tour] previousStep blocked - already in progress"
+						);
 					}
+					return Promise.resolve();
 				}
-				await process();
+				this.isProcessing = true;
 			}
 
-			return Promise.resolve();
+			try {
+				let futureStep = this.currentStep - 1;
+
+				if (futureStep > -1) {
+					let step = this.steps[futureStep];
+					if (typeof step.before !== "undefined") {
+						try {
+							await step.before("previous");
+						} catch (e) {
+							if (!wasProcessing) {
+								this.isProcessing = false;
+							}
+							return Promise.reject(e);
+						}
+					}
+
+					// Reset isProcessing before changing currentStep so the new step renders with buttons enabled.
+					this.isProcessing = false;
+
+					let process = () =>
+						new Promise((resolve, reject) => {
+							this.customCallbacks.onPreviousStep(
+								this.currentStep
+							);
+							this.currentStep = futureStep;
+							resolve();
+						});
+
+					await process();
+				} else {
+					// Only reset if we activated it.
+					if (!wasProcessing) {
+						this.isProcessing = false;
+					}
+				}
+
+				return Promise.resolve();
+			} catch (error) {
+				// Only reset if we activated it
+				if (!wasProcessing) {
+					this.isProcessing = false;
+				}
+				throw error;
+			}
 		},
 		async nextStep() {
-			let futureStep = this.currentStep + 1;
+			// If isProcessing is already active, we're being called from a wrapped custom action.
+			const wasProcessing = this.isProcessing;
 
-			let process = () =>
-				new Promise((resolve, reject) => {
-					this.customCallbacks.onNextStep(this.currentStep);
-					this.currentStep = futureStep;
-					resolve();
-				});
-
-			if (futureStep < this.numberOfSteps && this.currentStep !== -1) {
-				let step = this.steps[futureStep];
-				if (typeof step.before !== "undefined") {
-					try {
-						await step.before("next");
-					} catch (e) {
-						return Promise.reject(e);
+			// Only activate isProcessing if it wasn't already active.
+			if (!wasProcessing && this.customOptions.preventMultipleActions) {
+				if (this.isProcessing) {
+					if (this.customOptions.debug) {
+						console.log(
+							"[Vue Tour] nextStep blocked - already in progress"
+						);
 					}
+					return Promise.resolve();
 				}
-				await process();
+				this.isProcessing = true;
 			}
 
-			return Promise.resolve();
+			try {
+				let futureStep = this.currentStep + 1;
+
+				if (
+					futureStep < this.numberOfSteps &&
+					this.currentStep !== -1
+				) {
+					let step = this.steps[futureStep];
+					if (typeof step.before !== "undefined") {
+						try {
+							await step.before("next");
+						} catch (e) {
+							if (!wasProcessing) {
+								this.isProcessing = false;
+							}
+							return Promise.reject(e);
+						}
+					}
+
+					// Reset isProcessing before changing currentStep so the new step renders with buttons enabled.
+					this.isProcessing = false;
+
+					let process = () =>
+						new Promise((resolve, reject) => {
+							this.customCallbacks.onNextStep(this.currentStep);
+							this.currentStep = futureStep;
+							resolve();
+						});
+
+					await process();
+				} else {
+					// Only reset if we activated it.
+					if (!wasProcessing) {
+						this.isProcessing = false;
+					}
+				}
+
+				return Promise.resolve();
+			} catch (error) {
+				// Only reset if we activated it.
+				if (!wasProcessing) {
+					this.isProcessing = false;
+				}
+				throw error;
+			}
 		},
 		stop() {
 			this.customCallbacks.onStop();
@@ -219,15 +342,108 @@ export default {
 			this.currentStep = -1;
 		},
 		skip() {
-			this.customCallbacks.onSkip();
-			this.stop();
+			// If isProcessing is already active, we're being called from a wrapped custom action.
+			const wasProcessing = this.isProcessing;
+
+			// Only activate isProcessing if it wasn't already active
+			if (!wasProcessing && this.customOptions.preventMultipleActions) {
+				if (this.isProcessing) {
+					if (this.customOptions.debug) {
+						console.log(
+							"[Vue Tour] skip blocked - already in progress"
+						);
+					}
+					return;
+				}
+				this.isProcessing = true;
+			}
+
+			try {
+				this.customCallbacks.onSkip();
+				this.stop();
+			} finally {
+				// Only reset if we activated it.
+				if (!wasProcessing) {
+					this.isProcessing = false;
+				}
+			}
 		},
 		finish() {
-			this.customCallbacks.onFinish();
-			this.stop();
+			// If isProcessing is already active, we're being called from a wrapped custom action.
+			const wasProcessing = this.isProcessing;
+
+			// Only activate isProcessing if it wasn't already active.
+			if (!wasProcessing && this.customOptions.preventMultipleActions) {
+				if (this.isProcessing) {
+					if (this.customOptions.debug) {
+						console.log(
+							"[Vue Tour] finish blocked - already in progress"
+						);
+					}
+					return;
+				}
+				this.isProcessing = true;
+			}
+
+			try {
+				this.customCallbacks.onFinish();
+				this.stop();
+			} finally {
+				// Only reset if we activated it.
+				if (!wasProcessing) {
+					this.isProcessing = false;
+				}
+			}
+		},
+
+		handleNext() {
+			const currentStep = this.steps[this.currentStep];
+			const customAction = currentStep?.buttonNext?.action;
+			if (customAction) {
+				this.executeNavigationAction(customAction);
+			} else {
+				this.nextStep();
+			}
+		},
+		handlePrevious() {
+			const currentStep = this.steps[this.currentStep];
+			const customAction = currentStep?.buttonPrevious?.action;
+			if (customAction) {
+				this.executeNavigationAction(customAction);
+			} else {
+				this.previousStep();
+			}
+		},
+		handleSkip() {
+			const currentStep = this.steps[this.currentStep];
+			const customAction = currentStep?.buttonSkip?.action;
+			if (customAction) {
+				this.executeNavigationAction(customAction);
+			} else {
+				this.skip();
+			}
+		},
+		handleFinish() {
+			const currentStep = this.steps[this.currentStep];
+			const customAction = currentStep?.buttonStop?.action;
+			if (customAction) {
+				this.executeNavigationAction(customAction);
+			} else {
+				this.finish();
+			}
 		},
 
 		handleKeyup(e) {
+			// Block keyboard navigation if an action is already in progress.
+			if (this.isProcessing) {
+				if (this.customOptions.debug) {
+					console.log(
+						"[Vue Tour] Keyboard navigation blocked - action already in progress"
+					);
+				}
+				return;
+			}
+
 			if (this.customOptions.debug)
 				console.log("[DEBUG] [Vue Tour] A keyup event occured:", e);
 			const isButtonAllowed = name =>
@@ -236,19 +452,41 @@ export default {
 				)
 					? this.steps[this.currentStep].enabledButtons[name]
 					: true;
+
+			const currentStep = this.steps[this.currentStep];
+
 			switch (e.keyCode) {
 				case KEYS.ARROW_LEFT:
-					isButtonAllowed("buttonPrevious") &&
-						this.isKeyEnabled("arrowRight") &&
-						this.previousStep();
+					if (
+						isButtonAllowed("buttonPrevious") &&
+						this.isKeyEnabled("arrowRight")
+					) {
+						const customAction =
+							currentStep?.buttonPrevious?.action;
+						if (customAction) {
+							this.executeNavigationAction(customAction);
+						} else {
+							this.executeNavigationAction(this.previousStep);
+						}
+					}
 					break;
 				case KEYS.ARROW_RIGHT:
-					isButtonAllowed("buttonNext") &&
-						this.isKeyEnabled("arrowLeft") &&
-						this.nextStep();
+					if (
+						isButtonAllowed("buttonNext") &&
+						this.isKeyEnabled("arrowLeft")
+					) {
+						const customAction = currentStep?.buttonNext?.action;
+						if (customAction) {
+							this.executeNavigationAction(customAction);
+						} else {
+							this.executeNavigationAction(this.nextStep);
+						}
+					}
 					break;
 				case KEYS.ESCAPE:
-					this.isKeyEnabled("escape") && this.stop();
+					if (this.isKeyEnabled("escape")) {
+						this.stop();
+					}
 					break;
 			}
 		},

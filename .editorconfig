@@ -1,4 +1,4 @@
-[*.{js,jsx,ts,tsx,vue}]
+[*.{js,jsx,ts,tsx,vue,json,md}]
 indent_style = tab
 indent_size = 4
 trim_trailing_whitespace = true

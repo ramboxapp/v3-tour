@@ -31,7 +31,8 @@ export const DEFAULT_OPTIONS = {
 	},
 	debug: false,
 	container: "body",
-	insertPosition: "inside"
+	insertPosition: "inside",
+	preventMultipleActions: true
 };
 
 export const HIGHLIGHT = {
