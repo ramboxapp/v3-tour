@@ -140,6 +140,52 @@ export default {
 		}
 	},
 	methods: {
+		async goToStep(targetStep, type, force = false) {
+			// Jump to specific step, triggering its before callback if defined.
+			// force parameter allows to bypass isProcessing check, useful when called from "before" or tour buttons already wrapped in isProcessing checks.
+			if (
+				typeof targetStep !== "number" ||
+				targetStep < 0 ||
+				targetStep >= this.steps.length
+			)
+				return;
+
+			if (
+				this.customOptions.preventMultipleActions &&
+				this.isProcessing &&
+				!force
+			) {
+				if (this.customOptions.debug) {
+					console.log(
+						"[Vue Tour] goToStep blocked - already in progress"
+					);
+				}
+				return Promise.resolve();
+			}
+			this.isProcessing = true;
+			try {
+				let step = this.steps[targetStep];
+				if (typeof step.before !== "undefined") {
+					try {
+						await step.before(type);
+					} catch (e) {
+						this.isProcessing = false;
+						return Promise.reject(e);
+					}
+				}
+				this.isProcessing = false;
+				let process = () =>
+					new Promise((resolve, reject) => {
+						this.currentStep = targetStep;
+						resolve();
+					});
+				await process();
+				return Promise.resolve();
+			} catch (error) {
+				this.isProcessing = false;
+				throw error;
+			}
+		},
 		async executeNavigationAction(action) {
 			// Allow disabling this feature via options.
 			if (!this.customOptions.preventMultipleActions) {
