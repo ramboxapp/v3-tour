@@ -4,6 +4,7 @@
 		class="v-step"
 		:id="'v-step-' + hash"
 		:ref="'v-step-' + hash"
+		:style="tooltipStyle"
 	>
 		<slot name="header">
 			<div v-if="step.header" class="v-step__header">
@@ -70,7 +71,7 @@
 import { createPopper } from "@popperjs/core";
 import jump from "jump.js";
 import sum from "hash-sum";
-import { DEFAULT_STEP_OPTIONS, HIGHLIGHT } from "../shared/constants";
+import { DEFAULT_STEP_OPTIONS } from "../shared/constants";
 
 export default {
 	name: "v-step",
@@ -304,7 +305,6 @@ export default {
 			} else {
 				if (this.targetElement) {
 					this.enableScrolling();
-					this.createHighlight();
 
 					createPopper(
 						this.targetElement,
@@ -339,61 +339,26 @@ export default {
 						? jump(this.targetElement, jumpOptions)
 						: this.ionicScroll(jumpOptions);
 				} else {
-					// Use the native scroll by default if no scroll options has been defined
+					// Use the native scroll by default if no scroll options has been defined.
 					this.targetElement.scrollIntoView({ behavior: "smooth" });
 				}
 			}
 		},
-		isHighlightEnabled() {
-			return this.params.highlight;
-		},
-		createHighlight() {
-			if (this.isHighlightEnabled() && this.targetElement) {
-				this.containerElement.classList.add(HIGHLIGHT.classes.active);
-				const transitionValue = window
-					.getComputedStyle(this.targetElement)
-					.getPropertyValue("transition");
-
-				// Make sure our background doesn't flick on transitions
-				if (transitionValue !== "all 0s ease 0s") {
-					this.targetElement.style.transition = `${transitionValue}, ${HIGHLIGHT.transition}`;
-				}
-
-				this.targetElement.classList.add(
-					HIGHLIGHT.classes.targetHighlighted
-				);
-				// The element must have a position, if it doesn't have one, add a relative position class
-				if (!this.targetElement.style.position) {
-					this.targetElement.classList.add(
-						HIGHLIGHT.classes.targetRelative
-					);
-				}
-			} else {
-				this.containerElement.classList.remove(
-					HIGHLIGHT.classes.active
-				);
-			}
-		},
-		removeHighlight() {
-			if (this.isHighlightEnabled() && this.targetElement) {
-				const target = this.targetElement;
-				const currentTransition = this.targetElement.style.transition;
-				this.targetElement.classList.remove(
-					HIGHLIGHT.classes.targetHighlighted
-				);
-				this.targetElement.classList.remove(
-					HIGHLIGHT.classes.targetRelative
-				);
-				// Remove our transition when step is finished.
-				if (currentTransition.includes(HIGHLIGHT.transition)) {
-					setTimeout(() => {
-						target.style.transition = currentTransition.replace(
-							`, ${HIGHLIGHT.transition}`,
-							""
-						);
-					}, 0);
-				}
-			}
+		tooltipStyle() {
+			// Tooltip style: always above spotlight.
+			return {
+				position: "fixed",
+				zIndex: 10000,
+				background: "#fff",
+				border: "1px solid #e5e7eb",
+				boxShadow: "0 4px 24px 0 rgba(0,0,0,0.18)",
+				borderRadius: "12px",
+				padding: "1rem",
+				minWidth: "280px",
+				maxWidth: "350px",
+				color: "#222"
+				// You can add dynamic top/left if you want to position it near the target.
+			};
 		},
 		isButtonEnabled(name) {
 			return this.params.enabledButtons.hasOwnProperty(name)
@@ -514,9 +479,6 @@ export default {
 	},
 	mounted() {
 		this.createStep();
-	},
-	unmounted() {
-		this.removeHighlight();
 	}
 };
 </script>

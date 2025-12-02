@@ -1,6 +1,30 @@
 <template>
 	<div class="v-tour">
 		<slot
+			name="spotlight-mask"
+			:current-step="currentStep"
+			:target-selector="highlightConfig.target"
+			:padding="highlightConfig.padding"
+			:opacity="highlightConfig.opacity"
+			:border-radius="highlightConfig.radius"
+			:z-index="highlightConfig.zIndex"
+			:editable="step?.editable"
+			:force-mask="step?.forceMask"
+			:debug="customOptions.debug"
+		>
+			<v-spotlight-mask
+				v-if="steps[currentStep]"
+				:target-selector="highlightConfig.target"
+				:padding="highlightConfig.padding"
+				:opacity="highlightConfig.opacity"
+				:border-radius="highlightConfig.radius"
+				:z-index="highlightConfig.zIndex"
+				:editable="step.editable"
+				:force-mask="step.forceMask"
+				:debug="customOptions.debug"
+			/>
+		</slot>
+		<slot
 			:current-step="currentStep"
 			:steps="steps"
 			:previous-step="previousStep"
@@ -48,11 +72,7 @@
 				:handlePrevious="handlePrevious"
 				:handleSkip="handleSkip"
 				:handleFinish="handleFinish"
-			>
-				<!--<div v-if="index === 2" slot="actions">
-					<a @click="nextStep">Next step</a>
-				</div>-->
-			</v-step>
+			/>
 		</slot>
 	</div>
 </template>
@@ -60,11 +80,13 @@
 <script>
 import { DEFAULT_CALLBACKS, DEFAULT_OPTIONS, KEYS } from "../shared/constants";
 import VStep from "./VStep.vue";
+import VSpotlightMask from "./VSpotlightMask.vue";
 
 export default {
 	name: "v-tour",
 	components: {
-		VStep
+		VStep,
+		VSpotlightMask
 	},
 	props: {
 		steps: {
@@ -118,6 +140,33 @@ export default {
 			return {
 				...DEFAULT_CALLBACKS,
 				...this.callbacks
+			};
+		},
+		// Get the highlight configuration for the current step.
+		// Returns an object with all highlight properties (target, padding, opacity, etc.).
+		highlightConfig() {
+			if (!this.isRunning) return {};
+
+			const stepHighlight = this.step.highlight;
+
+			// If highlight is a boolean or undefined, return default config
+			if (typeof stepHighlight !== "object" || stepHighlight === null) {
+				return {
+					target: this.step.target,
+					padding: undefined,
+					opacity: undefined,
+					radius: undefined,
+					zIndex: undefined
+				};
+			}
+
+			// If highlight is an object, merge with step.target as fallback
+			return {
+				target: stepHighlight.target ?? this.step.target,
+				padding: stepHighlight.padding,
+				opacity: stepHighlight.opacity,
+				radius: stepHighlight.radius,
+				zIndex: stepHighlight.zIndex
 			};
 		},
 		// Return true if the tour is active, which means that there's a VStep displayed.
@@ -547,6 +596,7 @@ export default {
 </script>
 
 <style lang="scss">
+/*
 body.v-tour--active,
 .v-tour--active {
 	pointer-events: none;
@@ -565,4 +615,5 @@ body.v-tour--active,
 .v-tour__target--relative {
 	position: relative;
 }
+*/
 </style>

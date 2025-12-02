@@ -7,8 +7,17 @@ export const DEFAULT_CALLBACKS = {
 	onFinish: () => {}
 };
 
+export const DEFAULT_HIGHLIGHT = {
+	target: undefined,
+	padding: 0,
+	opacity: 0.7,
+	radius: 0,
+	zIndex: 9998
+};
+
 export const DEFAULT_OPTIONS = {
 	highlight: false,
+	editable: false,
 	labels: {
 		buttonSkip: "Skip tour",
 		buttonPrevious: "Previous",
@@ -46,7 +55,7 @@ export const HIGHLIGHT = {
 
 export const DEFAULT_STEP_OPTIONS = {
 	enableScrolling: true,
-	highlight: DEFAULT_OPTIONS.highlight, // By default use the global tour setting
+	highlight: DEFAULT_OPTIONS.highlight, // By default use the global tour setting (can be boolean or object)
 	enabledButtons: DEFAULT_OPTIONS.enabledButtons,
 	modifiers: [
 		{
