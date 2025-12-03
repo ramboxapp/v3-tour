@@ -11,18 +11,21 @@
 			:editable="step?.editable"
 			:force-mask="step?.forceMask"
 			:debug="customOptions.debug"
+			:is-processing="isProcessing"
 		>
-			<v-spotlight-mask
-				v-if="steps[currentStep]"
-				:target-selector="highlightConfig.target"
-				:padding="highlightConfig.padding"
-				:opacity="highlightConfig.opacity"
-				:border-radius="highlightConfig.radius"
-				:z-index="highlightConfig.zIndex"
-				:editable="step.editable"
-				:force-mask="step.forceMask"
-				:debug="customOptions.debug"
-			/>
+			<transition name="fade">
+				<v-spotlight-mask
+					v-if="steps[currentStep] && highlightReady && !isProcessing"
+					:target-selector="highlightConfig.target"
+					:padding="highlightConfig.padding"
+					:opacity="highlightConfig.opacity"
+					:border-radius="highlightConfig.radius"
+					:z-index="highlightConfig.zIndex"
+					:editable="step.editable"
+					:force-mask="step.forceMask"
+					:debug="customOptions.debug"
+				/>
+			</transition>
 		</slot>
 		<slot
 			:current-step="currentStep"
@@ -68,6 +71,7 @@
 				:insert-position="customOptions.insertPosition"
 				:is-processing="isProcessing"
 				@targetNotFound="$emit('targetNotFound', $event)"
+				@readyForHighlight="highlightReady = true"
 				:handleNext="handleNext"
 				:handlePrevious="handlePrevious"
 				:handleSkip="handleSkip"
@@ -115,7 +119,8 @@ export default {
 	data() {
 		return {
 			currentStep: -1,
-			isProcessing: false
+			isProcessing: false,
+			highlightReady: false
 		};
 	},
 	mounted() {
@@ -225,6 +230,7 @@ export default {
 				this.isProcessing = false;
 				let process = () =>
 					new Promise((resolve, reject) => {
+						this.highlightReady = false;
 						this.currentStep = targetStep;
 						resolve();
 					});
@@ -290,6 +296,7 @@ export default {
 				let process = () =>
 					new Promise((resolve, reject) => {
 						setTimeout(() => {
+							this.highlightReady = false;
 							this.customCallbacks.onStart();
 							this.currentStep = startStep;
 							resolve();
@@ -339,6 +346,7 @@ export default {
 
 					let process = () =>
 						new Promise((resolve, reject) => {
+							this.highlightReady = false;
 							this.customCallbacks.onPreviousStep(
 								this.currentStep
 							);
@@ -404,6 +412,7 @@ export default {
 
 					let process = () =>
 						new Promise((resolve, reject) => {
+							this.highlightReady = false;
 							this.customCallbacks.onNextStep(this.currentStep);
 							this.currentStep = futureStep;
 							resolve();
@@ -595,25 +604,14 @@ export default {
 };
 </script>
 
-<style lang="scss">
-/*
-body.v-tour--active,
-.v-tour--active {
-	pointer-events: none;
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.2s ease;
 }
 
-.v-tour {
-	pointer-events: auto;
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
 }
-
-.v-tour__target--highlighted {
-	box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.4);
-	pointer-events: auto;
-	z-index: 9999;
-}
-
-.v-tour__target--relative {
-	position: relative;
-}
-*/
 </style>

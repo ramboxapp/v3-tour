@@ -311,6 +311,8 @@ export default {
 						this.$refs["v-step-" + this.hash],
 						this.params
 					);
+
+					this.renderHighlight();
 				} else {
 					if (this.debug)
 						console.error(
@@ -364,6 +366,10 @@ export default {
 			return this.params.enabledButtons.hasOwnProperty(name)
 				? this.params.enabledButtons[name]
 				: true;
+		},
+		renderHighlight() {
+			// Emit event to notify that the step is ready to show highlight
+			this.$emit("readyForHighlight");
 		},
 		handleNext() {
 			const customAction = this.step.buttonNext?.action;

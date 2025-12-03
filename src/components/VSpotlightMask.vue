@@ -44,6 +44,8 @@ export default {
 			hash: sum(this.targetSelector || ""),
 			resizeListenerId: null,
 			mutationObserver: null,
+			intersectionObserver: null,
+			scrollCleanup: null,
 			lastTarget: null
 		};
 	},
@@ -162,6 +164,14 @@ export default {
 			this.mutationObserver.disconnect();
 			this.mutationObserver = null;
 		}
+		if (this.intersectionObserver) {
+			this.intersectionObserver.disconnect();
+			this.intersectionObserver = null;
+		}
+		if (this.scrollCleanup) {
+			this.scrollCleanup();
+			this.scrollCleanup = null;
+		}
 	},
 	methods: {
 		updateRect() {
@@ -191,9 +201,19 @@ export default {
 				this.mutationObserver.disconnect();
 				this.mutationObserver = null;
 			}
+			if (this.intersectionObserver) {
+				this.intersectionObserver.disconnect();
+				this.intersectionObserver = null;
+			}
+			if (this.scrollCleanup) {
+				this.scrollCleanup();
+				this.scrollCleanup = null;
+			}
+
 			const el = document.querySelector(this.targetSelector);
 			if (!el) return;
-			// Observe changes in attributes, subtree, and childList.
+
+			// 1. MutationObserver - Observe changes in attributes, subtree, and childList.
 			this.mutationObserver = new MutationObserver(() => {
 				this.updateRect();
 			});
@@ -202,6 +222,33 @@ export default {
 				childList: true,
 				subtree: true
 			});
+
+			// 2. IntersectionObserver - Detect when element moves (like Popper's autoUpdate).
+			this.intersectionObserver = new IntersectionObserver(
+				() => {
+					this.updateRect();
+				},
+				{
+					threshold: [0, 1]
+				}
+			);
+			this.intersectionObserver.observe(el);
+
+			// 3. Scroll listeners on all ancestors (like Popper's autoUpdate).
+			const ancestors = this.getOverflowAncestors(el);
+			const scrollHandler = () => {
+				this.updateRect();
+			};
+			ancestors.forEach(ancestor => {
+				ancestor.addEventListener("scroll", scrollHandler, {
+					passive: true
+				});
+			});
+			this.scrollCleanup = () => {
+				ancestors.forEach(ancestor => {
+					ancestor.removeEventListener("scroll", scrollHandler);
+				});
+			};
 
 			if (this.debug)
 				console.log(
@@ -255,6 +302,28 @@ export default {
 			}
 
 			return undefined;
+		},
+		getOverflowAncestors(element) {
+			// Get all scrollable ancestors (like Popper's getOverflowAncestors)
+			const ancestors = [];
+			let currentElement = element.parentElement;
+
+			while (currentElement) {
+				const styles = window.getComputedStyle(currentElement);
+				const overflow =
+					styles.overflow + styles.overflowX + styles.overflowY;
+
+				if (/(auto|scroll)/.test(overflow)) {
+					ancestors.push(currentElement);
+				}
+
+				currentElement = currentElement.parentElement;
+			}
+
+			// Always include window for viewport scrolling
+			ancestors.push(window);
+
+			return ancestors;
 		}
 	}
 };
